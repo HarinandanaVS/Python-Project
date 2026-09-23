@@ -1,5 +1,3 @@
-# Polymorphism
-
 import random
 import string
 import json
@@ -7,16 +5,12 @@ import time
 import os
 
 
-# ---------------- PASSENGER CLASS ----------------
-
 class Passenger:
     def __init__(self, name, age, passenger_type):
         self.name = name
         self.age = age
         self.passenger_type = passenger_type
 
-
-# ---------------- TICKET CLASS ----------------
 
 class Ticket:
     def __init__(self, pnr, passenger, train_name, travel_class,
@@ -45,14 +39,11 @@ class Ticket:
         }
 
 
-# ---------------- TRAIN CLASS ----------------
-
 class Train:
     def __init__(self, train_number, train_name):
         self.train_number = train_number
         self.train_name = train_name
 
-        # Dictionary to maintain seats and their status
         self.seats = {
             "Sleeper": {i: None for i in range(1, 6)},
             "AC 3-Tier": {i: None for i in range(1, 4)},
@@ -83,9 +74,7 @@ class Train:
             available = self.available_seats(travel_class)
             print(f"{travel_class}: {len(available)} seats available")
             print(f"Available seat numbers: {available}")
-
-
-# ---------------- RESERVATION SYSTEM CLASS ----------------
+            
 
 class ReservationSystem:
     def __init__(self):
@@ -96,7 +85,6 @@ class ReservationSystem:
 
         self.load_data()
 
-    # Generate a unique PNR
     def generate_pnr(self):
         while True:
             pnr = ''.join(random.choices(string.digits, k=6))
@@ -104,7 +92,6 @@ class ReservationSystem:
             if not any(ticket.pnr == pnr for ticket in self.tickets):
                 return pnr
 
-    # Calculate fare according to class and passenger type
     def calculate_fare(self, travel_class, passenger_type):
         fare = self.train.fare_rates[travel_class]
 
@@ -115,7 +102,6 @@ class ReservationSystem:
 
         return round(fare, 2)
 
-    # Check whether passenger already has an active booking
     def duplicate_booking(self, name):
         for ticket in self.tickets:
             if (ticket.passenger.name.lower() == name.lower()
@@ -128,7 +114,6 @@ class ReservationSystem:
 
         return False
 
-    # Book a ticket
     def book_ticket(self):
         print("\n--- Book Ticket ---")
 
@@ -196,7 +181,6 @@ class ReservationSystem:
         passenger = Passenger(name, age, passenger_type)
         available = self.train.available_seats(travel_class)
 
-        # Confirm booking if a seat is available
         if available:
             seat_number = available[0]
             pnr = self.generate_pnr()
@@ -219,7 +203,6 @@ class ReservationSystem:
             print("\nTicket booked successfully!")
             self.display_ticket(ticket)
 
-        # Otherwise add passenger to FIFO waiting list
         else:
             waiting_entry = {
                 "passenger": passenger,
@@ -235,7 +218,6 @@ class ReservationSystem:
             print("Passenger added to the waiting list.")
             print(f"Waiting list position: {len(self.waiting_list)}")
 
-    # Display ticket details
     def display_ticket(self, ticket):
         print("\n-----------------------------")
         print("        TICKET DETAILS")
@@ -252,7 +234,6 @@ class ReservationSystem:
         print(f"Booking Time: {ticket.booking_time}")
         print("-----------------------------")
 
-    # Search ticket using PNR
     def search_by_pnr(self):
         print("\n--- Search by PNR ---")
         pnr = input("Enter PNR: ").strip()
@@ -270,7 +251,6 @@ class ReservationSystem:
 
         print("Invalid PNR. Ticket not found.")
 
-    # Search passenger
     def search_passenger(self):
         print("\n--- Search Passenger ---")
         name = input("Enter passenger name: ").strip().lower()
@@ -292,7 +272,6 @@ class ReservationSystem:
         if not found:
             print("Passenger not found.")
 
-    # Cancel ticket
     def cancel_ticket(self):
         print("\n--- Cancel Ticket ---")
         pnr = input("Enter PNR to cancel: ").strip()
@@ -308,7 +287,6 @@ class ReservationSystem:
             print("Invalid PNR or ticket already cancelled.")
             return
 
-        # Calculate cancellation charge based on fare
         print("\nCancellation Policy:")
         print("More than 48 hours: 10% charge")
         print("24 to 48 hours: 25% charge")
@@ -337,7 +315,6 @@ class ReservationSystem:
         )
         refund = round(ticket_to_cancel.fare - cancellation_charge, 2)
 
-        # Free the seat
         travel_class = ticket_to_cancel.travel_class
         seat_number = ticket_to_cancel.seat_number
 
@@ -355,12 +332,10 @@ class ReservationSystem:
         print(f"Cancellation charge: ₹{cancellation_charge}")
         print(f"Refund amount: ₹{refund}")
 
-        # Promote first eligible waiting passenger
         self.promote_waiting_passenger(travel_class, seat_number)
 
         self.save_data()
 
-    # Promote waiting passenger after cancellation
     def promote_waiting_passenger(self, travel_class, seat_number):
         for entry in self.waiting_list:
             if entry["travel_class"] == travel_class:
@@ -398,7 +373,6 @@ class ReservationSystem:
 
         print("No eligible passenger found in the waiting list.")
 
-    # Display waiting list
     def display_waiting_list(self):
         print("\n--- Waiting List ---")
 
@@ -416,7 +390,6 @@ class ReservationSystem:
                 f"Type: {passenger.passenger_type}"
             )
 
-    # Display all confirmed tickets
     def display_all_tickets(self):
         print("\n--- Confirmed Tickets ---")
 
@@ -427,7 +400,6 @@ class ReservationSystem:
         for ticket in self.tickets:
             self.display_ticket(ticket)
 
-    # Save data to JSON file
     def save_data(self):
         data = {
             "tickets": [ticket.to_dict() for ticket in self.tickets],
@@ -448,7 +420,6 @@ class ReservationSystem:
         with open("railway_data.json", "w") as file:
             json.dump(data, file, indent=4)
 
-    # Load data from JSON file
     def load_data(self):
         if not os.path.exists("railway_data.json"):
             return
@@ -457,7 +428,6 @@ class ReservationSystem:
             with open("railway_data.json", "r") as file:
                 data = json.load(file)
 
-            # Load confirmed tickets
             for item in data.get("tickets", []):
                 passenger_data = item["passenger"]
 
@@ -487,7 +457,6 @@ class ReservationSystem:
                         ticket.seat_number
                     ] = ticket.pnr
 
-            # Load cancelled tickets
             for item in data.get("cancelled_tickets", []):
                 passenger_data = item["passenger"]
 
@@ -512,7 +481,6 @@ class ReservationSystem:
 
                 self.cancelled_tickets.append(ticket)
 
-            # Load waiting list
             for item in data.get("waiting_list", []):
                 passenger_data = item["passenger"]
 
@@ -531,9 +499,7 @@ class ReservationSystem:
 
         except (json.JSONDecodeError, KeyError, TypeError):
             print("Saved data could not be loaded correctly.")
-
-
-# ---------------- MAIN MENU ----------------
+            
 
 def main():
     system = ReservationSystem()
