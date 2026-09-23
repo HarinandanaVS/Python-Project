@@ -7,10 +7,6 @@ import os
 LEADERBOARD_FILE = "leaderboard.json"
 
 
-# --------------------------------------------------
-# Player Class
-# --------------------------------------------------
-
 class Player:
     def __init__(self, name):
         self.name = name
@@ -56,10 +52,6 @@ class Player:
         return player
 
 
-# --------------------------------------------------
-# Load and Save Leaderboard
-# --------------------------------------------------
-
 def load_leaderboard():
     if os.path.exists(LEADERBOARD_FILE):
         try:
@@ -87,10 +79,6 @@ def save_leaderboard(leaderboard):
         json.dump(data, file, indent=4)
 
 
-# --------------------------------------------------
-# Display Rules
-# --------------------------------------------------
-
 def display_rules():
     print("\n" + "=" * 55)
     print("              GAME RULES")
@@ -106,10 +94,6 @@ def display_rules():
     print("9. The leaderboard is saved after every game.")
     print("=" * 55)
 
-
-# --------------------------------------------------
-# Difficulty Selection
-# --------------------------------------------------
 
 def choose_difficulty():
     difficulties = {
@@ -131,10 +115,6 @@ def choose_difficulty():
 
         print("Invalid difficulty choice. Please select 1, 2, or 3.")
 
-
-# --------------------------------------------------
-# Get Players
-# --------------------------------------------------
 
 def get_players(leaderboard):
     while True:
@@ -228,10 +208,6 @@ def calculate_score(base_points, attempts_used, time_taken):
     return max(score, 0)
 
 
-# --------------------------------------------------
-# Play One Player's Turn
-# --------------------------------------------------
-
 def play_turn(player, secret_number, max_attempts, base_points, lower, upper):
     print(f"\n{'-' * 50}")
     print(f"{player.name}'s Turn")
@@ -271,13 +247,11 @@ def play_turn(player, secret_number, max_attempts, base_points, lower, upper):
             print(f"Points earned: {score}")
 
             return score, attempts_used, time_taken
-
-        # Penalty information
+   
         current_penalty = attempts_used * 20
         print(get_hint(guess, secret_number))
         print(f"Penalty applied: {current_penalty} points")
 
-    # Player failed to guess correctly
     time_taken = time.time() - start_time
 
     print("\nYou have used all your attempts.")
@@ -286,10 +260,6 @@ def play_turn(player, secret_number, max_attempts, base_points, lower, upper):
 
     return 0, attempts_used, time_taken
 
-
-# --------------------------------------------------
-# Start New Game
-# --------------------------------------------------
 
 def start_new_game(leaderboard):
     print("\n" + "=" * 55)
@@ -303,7 +273,6 @@ def start_new_game(leaderboard):
 
     secret_number = random.randint(lower, upper)
 
-    # Randomize player turn order
     random.shuffle(players)
 
     print(f"\nDifficulty selected: {difficulty}")
@@ -331,16 +300,11 @@ def start_new_game(leaderboard):
             "time": time_taken
         })
 
-    # Save after every completed game
     save_leaderboard(leaderboard)
 
     display_game_results(results)
     display_leaderboard(leaderboard)
 
-
-# --------------------------------------------------
-# Display Game Results
-# --------------------------------------------------
 
 def display_game_results(results):
     print("\n" + "=" * 60)
@@ -368,10 +332,6 @@ def display_game_results(results):
 
     print("=" * 60)
 
-
-# --------------------------------------------------
-# Display Leaderboard
-# --------------------------------------------------
 
 def display_leaderboard(leaderboard):
     print("\n" + "=" * 75)
@@ -414,10 +374,6 @@ def display_leaderboard(leaderboard):
     print("=" * 75)
 
 
-# --------------------------------------------------
-# Search Player Statistics
-# --------------------------------------------------
-
 def search_player_statistics(leaderboard):
     if not leaderboard:
         print("\nNo player statistics available.")
@@ -457,10 +413,6 @@ def search_player_statistics(leaderboard):
     print("=" * 45)
 
 
-# --------------------------------------------------
-# Main Menu
-# --------------------------------------------------
-
 def main():
     leaderboard = load_leaderboard()
 
@@ -498,10 +450,6 @@ def main():
         else:
             print("Invalid choice. Please select 1-5.")
 
-
-# --------------------------------------------------
-# Program Entry Point
-# --------------------------------------------------
 
 if __name__ == "__main__":
     main()
