@@ -1,455 +1,171 @@
 import random
 import time
-import json
 import os
 
-
-LEADERBOARD_FILE = "leaderboard.json"
-
-
 class Player:
-    def __init__(self, name):
+    def __init__(self, name, score=0, games_played=0):
         self.name = name
-        self.score = 0
-        self.attempts = 0
-        self.games_played = 0
-        self.games_won = 0
-        self.total_time = 0
-        self.best_score = 0
-
-    def update_statistics(self, score, attempts, time_taken):
-        self.score = score
-        self.attempts = attempts
-        self.games_played += 1
-        self.total_time += time_taken
-
-        if score > 0:
-            self.games_won += 1
-
-        if score > self.best_score:
-            self.best_score = score
-
-    def to_dictionary(self):
-        return {
-            "name": self.name,
-            "score": self.score,
-            "attempts": self.attempts,
-            "games_played": self.games_played,
-            "games_won": self.games_won,
-            "total_time": self.total_time,
-            "best_score": self.best_score
-        }
-
-    @staticmethod
-    def from_dictionary(data):
-        player = Player(data["name"])
-        player.score = data.get("score", 0)
-        player.attempts = data.get("attempts", 0)
-        player.games_played = data.get("games_played", 0)
-        player.games_won = data.get("games_won", 0)
-        player.total_time = data.get("total_time", 0)
-        player.best_score = data.get("best_score", 0)
-        return player
-
-
-def load_leaderboard():
-    if os.path.exists(LEADERBOARD_FILE):
-        try:
-            with open(LEADERBOARD_FILE, "r") as file:
-                data = json.load(file)
-
-            return {
-                name: Player.from_dictionary(details)
-                for name, details in data.items()
-            }
-
-        except (json.JSONDecodeError, KeyError):
-            print("Leaderboard file is invalid. Starting with an empty leaderboard.")
-
-    return {}
-
-
-def save_leaderboard(leaderboard):
-    data = {
-        name: player.to_dictionary()
-        for name, player in leaderboard.items()
-    }
-
-    with open(LEADERBOARD_FILE, "w") as file:
-        json.dump(data, file, indent=4)
-
-
-def display_rules():
-    print("\n" + "=" * 55)
-    print("              GAME RULES")
-    print("=" * 55)
-    print("1. The game supports 2 to 5 players.")
-    print("2. Every player must have a unique name.")
-    print("3. Players take turns in a randomized order.")
-    print("4. Each player receives a limited number of attempts.")
-    print("5. Correct guesses earn points.")
-    print("6. Incorrect guesses reduce points.")
-    print("7. Quick correct guesses receive a time bonus.")
-    print("8. A player gets zero points if all attempts are used.")
-    print("9. The leaderboard is saved after every game.")
-    print("=" * 55)
-
-
-def choose_difficulty():
-    difficulties = {
-        "1": ("Easy", 1, 50, 5, 100),
-        "2": ("Medium", 1, 100, 4, 150),
-        "3": ("Hard", 1, 500, 3, 250)
-    }
-
-    while True:
-        print("\nChoose Difficulty:")
-        print("1. Easy   (1-50, 5 attempts)")
-        print("2. Medium (1-100, 4 attempts)")
-        print("3. Hard   (1-500, 3 attempts)")
-
-        choice = input("Enter your choice: ").strip()
-
-        if choice in difficulties:
-            return difficulties[choice]
-
-        print("Invalid difficulty choice. Please select 1, 2, or 3.")
-
-
-def get_players(leaderboard):
-    while True:
-        try:
-            count = int(input("\nEnter number of players (2-5): "))
-
-            if count < 2 or count > 5:
-                print("Please enter a number between 2 and 5.")
-                continue
-
-            break
-
-        except ValueError:
-            print("Invalid input. Please enter a number.")
-
-    players = []
-    names_used = set()
-
-    for i in range(count):
-        while True:
-            name = input(f"Enter name for Player {i + 1}: ").strip()
-
-            if not name:
-                print("Name cannot be empty.")
-                continue
-
-            # Case-insensitive duplicate checking
-            name_key = name.lower()
-
-            if name_key in names_used:
-                print("Duplicate name in this game. Choose another name.")
-                continue
-
-            names_used.add(name_key)
-
-            # Reuse previous statistics if the name exists
-            existing_player = None
-
-            for saved_name, saved_player in leaderboard.items():
-                if saved_name.lower() == name_key:
-                    existing_player = saved_player
-                    break
-
-            if existing_player:
-                player = existing_player
-                print(f"Welcome back, {player.name}!")
-            else:
-                player = Player(name)
-                leaderboard[name] = player
-
-            players.append(player)
-            break
-
-    return players
-
-
-# --------------------------------------------------
-# Generate Hint
-# --------------------------------------------------
-
-def get_hint(guess, secret_number):
-    difference = abs(guess - secret_number)
-
-    if difference <= 5:
-        return "Very Close!"
-
-    if guess < secret_number:
-        return "Too Low!"
-
-    return "Too High!"
-
-
-# --------------------------------------------------
-# Calculate Score
-# --------------------------------------------------
-
-def calculate_score(base_points, attempts_used, time_taken):
-    # Penalty: 20 points for every incorrect attempt
-    penalty = (attempts_used - 1) * 20
-
-    # Time bonus for answering quickly
-    if time_taken <= 5:
-        time_bonus = 50
-    elif time_taken <= 10:
-        time_bonus = 25
-    else:
-        time_bonus = 0
-
-    score = base_points - penalty + time_bonus
-
-    return max(score, 0)
-
-
-def play_turn(player, secret_number, max_attempts, base_points, lower, upper):
-    print(f"\n{'-' * 50}")
-    print(f"{player.name}'s Turn")
-    print(f"You have {max_attempts} attempts.")
-    print(f"Guess a number between {lower} and {upper}.")
-    print(f"{'-' * 50}")
-
-    attempts_used = 0
-    start_time = time.time()
-    correct = False
-
-    while attempts_used < max_attempts:
-        try:
-            guess = int(input(f"Attempt {attempts_used + 1}: "))
-
-            if guess < lower or guess > upper:
-                print(f"Please enter a number between {lower} and {upper}.")
-                continue
-
-        except ValueError:
-            print("Invalid guess. Please enter a numeric value.")
-            continue
-
-        attempts_used += 1
-
-        if guess == secret_number:
-            correct = True
-            time_taken = time.time() - start_time
-            score = calculate_score(
-                base_points,
-                attempts_used,
-                time_taken
-            )
-
-            print("\nCorrect guess!")
-            print(f"Time taken: {time_taken:.2f} seconds")
-            print(f"Points earned: {score}")
-
-            return score, attempts_used, time_taken
-   
-        current_penalty = attempts_used * 20
-        print(get_hint(guess, secret_number))
-        print(f"Penalty applied: {current_penalty} points")
-
-    time_taken = time.time() - start_time
-
-    print("\nYou have used all your attempts.")
-    print(f"The secret number was: {secret_number}")
-    print("Points earned: 0")
-
-    return 0, attempts_used, time_taken
-
-
-def start_new_game(leaderboard):
-    print("\n" + "=" * 55)
-    print("          MULTIPLAYER NUMBER GUESSING")
-    print("              CHAMPIONSHIP")
-    print("=" * 55)
-
-    players = get_players(leaderboard)
-
-    difficulty, lower, upper, max_attempts, base_points = choose_difficulty()
-
-    secret_number = random.randint(lower, upper)
-
-    random.shuffle(players)
-
-    print(f"\nDifficulty selected: {difficulty}")
-    print("Player order has been randomized!")
-    print("Let the championship begin!")
-
-    results = []
-
-    for player in players:
-        score, attempts, time_taken = play_turn(
-            player,
-            secret_number,
-            max_attempts,
-            base_points,
-            lower,
-            upper
-        )
-
-        player.update_statistics(score, attempts, time_taken)
-
-        results.append({
-            "name": player.name,
-            "score": score,
-            "attempts": attempts,
-            "time": time_taken
-        })
-
-    save_leaderboard(leaderboard)
-
-    display_game_results(results)
-    display_leaderboard(leaderboard)
-
-
-def display_game_results(results):
-    print("\n" + "=" * 60)
-    print("                 GAME RESULTS")
-    print("=" * 60)
-
-    sorted_results = sorted(
-        results,
-        key=lambda x: x["score"],
-        reverse=True
-    )
-
-    for position, result in enumerate(sorted_results, start=1):
-        print(
-            f"{position}. {result['name']:<15} "
-            f"Score: {result['score']:<5} "
-            f"Attempts: {result['attempts']:<3} "
-            f"Time: {result['time']:.2f}s"
-        )
-
-    if sorted_results:
-        winner = sorted_results[0]
-        print(f"\n🏆 Winner: {winner['name']}!")
-        print(f"Winning score: {winner['score']}")
-
-    print("=" * 60)
-
-
-def display_leaderboard(leaderboard):
-    print("\n" + "=" * 75)
-    print("                     PERSISTENT LEADERBOARD")
-    print("=" * 75)
-
-    if not leaderboard:
-        print("No leaderboard records available.")
-        print("=" * 75)
-        return
-
-    players = sorted(
-        leaderboard.values(),
-        key=lambda player: (
-            player.best_score,
-            player.games_won,
-            -player.total_time
-        ),
-        reverse=True
-    )
-
-    print(
-        f"{'Rank':<6}{'Player':<18}{'Best Score':<13}"
-        f"{'Games':<10}{'Wins':<10}{'Avg Time'}"
-    )
-    print("-" * 75)
-
-    for rank, player in enumerate(players, start=1):
-        if player.games_played > 0:
-            average_time = player.total_time / player.games_played
+        self.score = int(score)
+        self.games_played = int(games_played)
+
+class Championship:
+    def __init__(self):
+        self.leaderboard = {}
+        self.load_leaderboard()
+
+    def load_leaderboard(self):
+        if os.path.exists("leaderboard.txt"):
+            with open("leaderboard.txt", "r") as file:
+                for line in file:
+                    data = line.strip().split(',')
+                    if len(data) == 3:
+                        self.leaderboard[data[0]] = Player(data[0], data[1], data[2])
+
+    def save_leaderboard(self):
+        with open("leaderboard.txt", "w") as file:
+            for p in self.leaderboard.values():
+                file.write(f"{p.name},{p.score},{p.games_played}\n")
+
+    def display_rules(self):
+        print("\n--- Game Rules ---")
+        print("1. Guess the secret number within your attempt limit.")
+        print("2. 10 points are deducted for every incorrect attempt.")
+        print("3. A bonus 50 points are awarded if you guess correctly in under 15 seconds.")
+        print("4. Zero points are awarded if you run out of attempts.")
+        
+    def show_leaderboard(self):
+        print("\n--- Leaderboard ---")
+        if not self.leaderboard:
+            print("No scores recorded yet.")
         else:
-            average_time = 0
+            sorted_players = sorted(self.leaderboard.values(), key=lambda x: x.score, reverse=True)
+            for idx, p in enumerate(sorted_players):
+                print(f"{idx+1}. {p.name} | Total Score: {p.score} | Games Played: {p.games_played}")
 
-        print(
-            f"{rank:<6}{player.name:<18}{player.best_score:<13}"
-            f"{player.games_played:<10}{player.games_won:<10}"
-            f"{average_time:.2f}s"
-        )
+    def search_player(self, name):
+        if name in self.leaderboard:
+            p = self.leaderboard[name]
+            print(f"\nPlayer: {p.name} | Total Score: {p.score} | Games Played: {p.games_played}")
+        else:
+            print("\nPlayer not found.")
 
-    print("=" * 75)
+    def start_game(self):
+        while True:
+            num_players = input("\nEnter number of players (2-5): ")
+            if num_players.isdigit() and 2 <= int(num_players) <= 5:
+                num_players = int(num_players)
+                break
+            print("Invalid input. Please enter a number between 2 and 5.")
 
+        current_players = []
+        for i in range(num_players):
+            while True:
+                name = input(f"Enter name for Player {i+1}: ")
+                if name not in current_players:
+                    current_players.append(name)
+                    if name not in self.leaderboard:
+                        self.leaderboard[name] = Player(name)
+                    break
+                print("Name already taken in this session. Choose another.")
 
-def search_player_statistics(leaderboard):
-    if not leaderboard:
-        print("\nNo player statistics available.")
-        return
+        print("\nDifficulty Levels: Easy (1-50), Medium (1-100), Hard (1-500)")
+        while True:
+            diff = input("Choose difficulty (Easy/Medium/Hard): ").capitalize()
+            if diff in ["Easy", "Medium", "Hard"]:
+                break
+            print("Invalid difficulty.")
 
-    name = input("\nEnter player name to search: ").strip()
+        if diff == "Easy":
+            max_num = 50
+            max_attempts = 5
+        elif diff == "Medium":
+            max_num = 100
+            max_attempts = 7
+        else:
+            max_num = 500
+            max_attempts = 10
 
-    found_player = None
+        secret_number = random.randint(1, max_num)
+        random.shuffle(current_players)
+        
+        print(f"\nGame starting! The secret number is between 1 and {max_num}.")
+        print(f"Turn order: {', '.join(current_players)}")
 
-    for saved_name, player in leaderboard.items():
-        if saved_name.lower() == name.lower():
-            found_player = player
-            break
+        game_active = True
+        attempts_tracker = {name: 0 for name in current_players}
+        start_time = time.time()
 
-    if found_player is None:
-        print("Player not found.")
-        return
+        while game_active:
+            for name in current_players:
+                if attempts_tracker[name] >= max_attempts:
+                    continue
 
-    player = found_player
+                print(f"\n{name}'s turn (Attempt {attempts_tracker[name]+1}/{max_attempts}):")
+                
+                while True:
+                    guess = input("Enter your guess: ")
+                    if guess.isdigit():
+                        guess = int(guess)
+                        break
+                    print("Invalid input. Please enter a number.")
 
-    print("\n" + "=" * 45)
-    print(f"       STATISTICS: {player.name}")
-    print("=" * 45)
-    print(f"Current Score  : {player.score}")
-    print(f"Best Score     : {player.best_score}")
-    print(f"Games Played   : {player.games_played}")
-    print(f"Games Won      : {player.games_won}")
-    print(f"Last Attempts  : {player.attempts}")
-    print(f"Total Time     : {player.total_time:.2f} seconds")
+                attempts_tracker[name] += 1
+                time_taken = time.time() - start_time
 
-    if player.games_played > 0:
-        print(
-            f"Average Time   : "
-            f"{player.total_time / player.games_played:.2f} seconds"
-        )
+                if guess == secret_number:
+                    print(f"\nCorrect, {name}! You found the number.")
+                    game_active = False
+                    
+                    points = 100 - (attempts_tracker[name] * 10)
+                    if time_taken < 15:
+                        print("Speed Bonus! +50 points.")
+                        points += 50
+                    
+                    self.leaderboard[name].score += points
+                    break
+                else:
+                    diff_val = abs(secret_number - guess)
+                    if diff_val <= 5:
+                        print("Very Close!")
+                    elif guess < secret_number:
+                        print("Too Low!")
+                    else:
+                        print("Too High!")
 
-    print("=" * 45)
+            if all(attempts_tracker[n] >= max_attempts for n in current_players) and game_active:
+                print(f"\nOut of attempts! The secret number was {secret_number}.")
+                game_active = False
 
+        for name in current_players:
+            self.leaderboard[name].games_played += 1
 
-def main():
-    leaderboard = load_leaderboard()
+        self.save_leaderboard()
 
+if __name__ == "__main__":
+    game = Championship()
     while True:
-        print("\n" + "=" * 55)
-        print("       MULTIPLAYER NUMBER GUESSING CHAMPIONSHIP")
-        print("=" * 55)
+        print("\n" + "="*40)
+        print("🏆 NUMBER GUESSING CHAMPIONSHIP 🏆")
+        print("="*40)
         print("1. Start New Game")
         print("2. Display Rules")
         print("3. Show Leaderboard")
         print("4. Search Player Statistics")
         print("5. Exit")
-        print("=" * 55)
-
-        choice = input("Enter your choice: ").strip()
-
-        if choice == "1":
-            start_new_game(leaderboard)
-
-        elif choice == "2":
-            display_rules()
-
-        elif choice == "3":
-            display_leaderboard(leaderboard)
-
-        elif choice == "4":
-            search_player_statistics(leaderboard)
-
-        elif choice == "5":
-            save_leaderboard(leaderboard)
-            print("\nThank you for playing!")
-            print("Leaderboard saved successfully.")
+        print("="*40)
+        choice = input("Enter your choice: ")
+        if choice == '1':
+            game.start_game()
+        elif choice == '2':
+            game.display_rules()
+        elif choice == '3':
+            game.show_leaderboard()
+        elif choice == '4':
+            name = input("Enter player name to search: ")
+            game.search_player(name)
+        elif choice == '5':
+            game.save_leaderboard()
+            print("Exiting. Thanks for playing!")
             break
-
         else:
-            print("Invalid choice. Please select 1-5.")
-
-
-if __name__ == "__main__":
-    main()
+            print("\nInvalid choice. Please enter a number between 1 and 5.")
